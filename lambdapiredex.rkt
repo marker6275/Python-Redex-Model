@@ -39,7 +39,7 @@
         (meta-class x)
         (meta-code (x ...) x e)
         (λ (x ...) opt-var.e))
-  
+
   ;; What is this period doing in this mval definition?
   
   ;; General question: how much of this paper's syntax can we copy word for word,
@@ -54,11 +54,12 @@
      (fetch e)
      (set! e e)
      (alloc e)
-     e[e] e[e := e]
+     (list-ref e e) ;; e[e]
+     (list-assign e e e) ;; e[e := e]
      (if e e e) (e e)
-     (let x = e+undef in e)
-     x (e := e) (delete e)
-     (e (e ...)) (e (e ...)*e) (frame e) (return e)
+     (let x e+undef e)
+     x (assign e e) (delete e)
+     (e (e ...)) (e (e ...) e ...) (frame e) (return e)
      (while e e e) (loop e e) break continue
      (builtin-prim op (e ...))
      (fun (x ...) opt-var e)
