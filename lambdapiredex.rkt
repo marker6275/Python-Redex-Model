@@ -19,8 +19,8 @@
   (ref ::= natural)
   
   ;;;; v, val - refer to values
-  (v val ::= (triple val mval (string : ref ...))
-     (triple x mval (string : ref ...))
+  (v val ::= (triple val mval (dict (string : ref) ...))
+     (triple x mval (dict (string : ref) ...))
      ref
      (sym string))
   
@@ -31,7 +31,7 @@
   (t ::= global local)
   
   ;;;; mval - refers to types
-  (mval ::= (no-meta) number string meta-none
+  (mval ::= (no-meta) num str meta-none
         (list val ...) (tuple val ...) (set val ...)
         (meta-class x)
         (meta-code (x ...) x e)
@@ -73,19 +73,32 @@
 (default-language λπ)
 
 (define-metafunction λπ
-  alloc : e+undef Σ -> Σ
-  [(alloc e+undef ()) ((0 e+undef))]
-  [(alloc e+undef_1 ((ref v+undef_2) ...)) ((,(length (term ((ref v+undef_2) ...))) e+undef_1) (ref v+undef_2) ...)])
+  alloc : v+undef Σ -> Σ
+  [(alloc v+undef ()) ((0 v+undef))]
+  [(alloc v+undef_1 ((ref v+undef_2) ...)) ((,(length (term ((ref v+undef_2) ...))) v+undef_1) (ref v+undef_2) ...)])
                       
 (define -->PythonRR
   (reduction-relation
    λπ
-   [--> ((let x e+undef e) Σ)
-        (e (alloc e+undef Σ))
+   ;; Figure 2
+   [--> ((let x v+undef e) Σ)
+        (e (alloc v+undef Σ))
         E-LetLocal]
-   [--> (ref ((ref_2 v+undef_1) ... (ref v+undef_2) (ref_3 v+undef_3) ...))
-        (v+undef_2 ((ref_2 v+undef_1) ... (ref v+undef_2) (ref_3 v+undef_3) ...))
-        E-GetVar]))
+   [--> (ref ((ref_2 v+undef_1) ... (ref val) (ref_3 v+undef_3) ...))
+        (val ((ref_2 v+undef_1) ... (ref val) (ref_3 v+undef_3) ...))
+        E-GetVar]
+   [--> (ref ((ref_2 v+undef_1) ... (ref skull) (ref_3 v+undef_3) ...))
+        ((raise (triple "Uninitialized Local" string (dict)) ((ref_2 v+undef_1) ... (ref skull) (ref_3 v+undef_3) ...)))
+        E-GetVarUndef]
+   ;; Figure 3
+   [--> ((obj-type val mval) Σ)
+        (,(length (term Σ)) (alloc (triple val mval (dict)) Σ))
+        E-Object]
+   [--> ((tuple e_1 (list e_2 ...)) Σ)
+        (,(length (term Σ)) (alloc (triple e_1 (list e_2 ...) (dict)) Σ))
+        E-Tuple]))
+
+(traces -->PythonRR (term ((tuple 3 (list 4 1 2)) ((0 1)))))
 ;; List of things we need to define in the language or as a metafunction:
 ;; triple
 ;; sym
