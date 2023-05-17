@@ -22,12 +22,9 @@
   (v val ::= (triple val mval (string : ref ...))
      (triple x mval (string : ref ...))
      ref
-     (sym string)
-     ;; What is (sym string) meant to represent? An error perhaps?
-     )
+     (sym string))
   
   (v+undef ::= v skull)
-  ;; undef? What's that? Is this syntax of "v+undef" cool?
   (e+undef ::= e skull)
   
   ;;;; t - refers to scope
@@ -39,15 +36,8 @@
         (meta-class x)
         (meta-code (x ...) x e)
         (λ (x ...) opt-var.e))
-
-  ;; What is this period doing in this mval definition?
-  
-  ;; General question: how much of this paper's syntax can we copy word for word,
-  ;; especially when the group of us don't understand exactly what it's doing?
-  ;; Also, what is opt-var?
   (opt-var ::= (x) (no-var))
-  ;; Why does x have parentheses around it here?
-
+  
   ;;;; e - refers to expressions
   (e ::= v
      ref
@@ -59,7 +49,7 @@
      (if e e e) (e e)
      (let x e+undef e)
      x (assign e e) (delete e)
-     (e (e ...)) (e (e ...) e ...) (frame e) (return e)
+     (e (e ...)) (e (e ...) e) (frame e) (return e)
      (while e e e) (loop e e) break continue
      (builtin-prim op (e ...))
      (fun (x ...) opt-var e)
@@ -80,15 +70,22 @@
 ;; double check :)
 
 ;; We need to define triple, list, tuple, and set.
-;; We're getting an error that reads as follows:
-;; lambdapiredex.rkt:36:3: define-language: the non-terminal e is defined in terms of itself
-;; at: e
-;; in: (define-language λπ (Σ ::= ((ref v+undef) ...)) (ref ::= natural) (v val ::= (triple val mval (string : ref ...)) (triple x mval (string : ref ...)) ref) (v+undef ::= v skull) (e+undef ::= e skull) (t ::= global local) (mval ::= (no-meta) number s...
-;; #(1195 1)
-;; ^^ How should we handle this? The ISWIM syntax self-references all the time.
-
 (default-language λπ)
 
+(define-metafunction λπ
+  alloc : e+undef Σ -> Σ
+  [(alloc e+undef ()) ((0 e+undef))]
+  [(alloc e+undef_1 ((ref v+undef_2) ...)) ((,(length (term ((ref v+undef_2) ...))) e+undef_1) (ref v+undef_2) ...)])
+                      
+(define -->PythonRR
+  (reduction-relation
+   λπ
+   [--> ((let x e+undef e) Σ)
+        (e (alloc e+undef Σ))
+        E-LetLocal]
+   [--> (ref ((ref_2 v+undef_1) ... (ref v+undef_2) (ref_3 v+undef_3) ...))
+        (v+undef_2 ((ref_2 v+undef_1) ... (ref v+undef_2) (ref_3 v+undef_3) ...))
+        E-GetVar]))
 ;; List of things we need to define in the language or as a metafunction:
 ;; triple
 ;; sym
@@ -133,5 +130,3 @@
 ;; in-module
 
 ;; Reduction Rules
-;; they don't actually talk much about reduction rules for the basic function calls, etc.
-;; so how should we approach translating it?
