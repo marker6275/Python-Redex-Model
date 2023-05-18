@@ -65,18 +65,39 @@
   ;; "binding forms"?
   )
 
-;; How much of these special form names (fetch, set!, allloc, if, let, frame,
-;; return, while, loop, etc) do we need to define? I assume all of them, but I want to
-;; double check :)
+(define-extended-language RS-λπ
+  λπ
+  (e ::= .... error)
+  (v ::= b (λ (x) e))
+  (c ::= (e ρ))
+  (ρ ::= ((x c) ...))
+  (vc ::= (v ρ))
+  (κ ::= mt (fn vc κ) (arg c κ) (prim (vc ... op) (c ...) κ) (handler b ((λ (x) e) ρ) κ))
+  (κκ ::= (fn vc κ) (arg c κ) (prim (vc ... op) (c ...) κ))
+  (s ::= (c κ)))
 
 ;; We need to define triple, list, tuple, and set.
 (default-language λπ)
 
 (define-metafunction λπ
-  alloc : v+undef Σ -> Σ
+  alloc : v+undef Σ -> (ref Σ)
   [(alloc v+undef ()) ((0 v+undef))]
   [(alloc v+undef_1 ((ref v+undef_2) ...)) ((,(length (term ((ref v+undef_2) ...))) v+undef_1) (ref v+undef_2) ...)])
-                      
+  
+(define-metafunction λπ
+  get : ref Σ -> v+undef
+  [(get ref ()) ((raise (triple "Uninitialized Global" str (dict))))]
+  [(get ref ((ref v+undef_1) (ref_2 v+undef_2) ...)) v+undef_1]
+  [(get ref ((ref_1 v+undef_1) (ref_2 v+undef_2) ...)) (get ref ((ref_2 v+undef_2) ...))])
+  
+(define-metafunction λπ
+  alloc! : ref val Σ -> Σ
+  [(alloc! ref val ()) ((raise (triple "Uninitialized Global" str (dict))))]
+  [(alloc! ref val ((ref val_1) (ref_1 val_2) ...)) ((ref val) (ref_1 val_2) ...)]
+  [(alloc! ref val ((ref_1 val_1) (ref_2 val_2) ...)) ((ref_1 val_1) (ref_3 val_3) ...)
+                                                      (where ((ref_3 val_3) ...) (alloc! ref val ((ref_2 val_2) ...)))])
+;; side condition?
+
 (define -->PythonRR
   (reduction-relation
    λπ
@@ -88,17 +109,27 @@
         (val ((ref_2 v+undef_1) ... (ref val) (ref_3 v+undef_3) ...))
         E-GetVar]
    [--> (ref ((ref_2 v+undef_1) ... (ref skull) (ref_3 v+undef_3) ...))
-        ((raise (triple "Uninitialized Local" string (dict)) ((ref_2 v+undef_1) ... (ref skull) (ref_3 v+undef_3) ...)))
+        ((raise (triple "Uninitialized Local" str (dict)) ((ref_2 v+undef_1) ... (ref skull) (ref_3 v+undef_3) ...)))
         E-GetVarUndef]
    ;; Figure 3
    [--> ((obj-type val mval) Σ)
         (,(length (term Σ)) (alloc (triple val mval (dict)) Σ))
         E-Object]
    [--> ((tuple e_1 (list e_2 ...)) Σ)
-        (,(length (term Σ)) (alloc (triple e_1 (list e_2 ...) (dict)) Σ))
-        E-Tuple]))
+        (,(length (term Σ)) (alloc (triple e_1 (tuple e_2 ...) (dict)) Σ))
+        E-Tuple]
+   [--> ((set e_1 (list e_2 ...)) Σ)
+        (,(length (term Σ)) (alloc (triple e_1 (set e_2 ...) (dict)) Σ))
+        E-Set]
+   ;; Figure 5
+   [--> ((fetch ref) Σ)
+        ((get ref Σ) Σ)
+        E-Fetch]
+   [--> ((set! ref val) Σ)
+        (val (alloc! ref val Σ))
+        E-Set!]))
 
-(traces -->PythonRR (term ((tuple 3 (list 4 1 2)) ((0 1)))))
+(traces -->PythonRR (term ((set 2 (list 4 5)) ((0 2)))))
 ;; List of things we need to define in the language or as a metafunction:
 ;; triple
 ;; sym
