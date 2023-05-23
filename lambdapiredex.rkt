@@ -162,12 +162,17 @@
    [--> ((alloc val) Σ)
         (alloc! val Σ)
         E-Alloc]
+   
+   ;; Figure 6
    ;; (list-assign e e e) ;; e[e := e]
-   [--> ((list-assign ref_1 ref_2 val) Σ)
-        (val (get-store (alloc! ref_3 val Σ)))
-        ;;We need a side-condition that makes sure...
-        ;; ref_2 maps to a triple with mval=string_1
-        ;; ref_1 maps to a triple with a field of type string_1 and value ref_3
+   [--> ((list-assign ref_4 ref_5 val) Σ)
+        (val (get-store (alloc! ref_1 val Σ)))
+        (side-condition (and (= (term (get ref_4 Σ))
+                                (term (triple x mval (dict (string_2 : ref_2) ... (string_1 : ref_1) (string_3 : ref_3) ...))))
+                             (= (term (get ref_5 Σ))
+                                (term (triple y string_1 (dict (string : ref) ...))))))
+        ;; We're currently getting an error because it doesn't recognize (string : ref) as a pattern variable.
+        ;; Do we need a better way to represent dictionaries? Racket level, or maybe as our own data structure with associated metafunctions?
         ]
    ))
 
