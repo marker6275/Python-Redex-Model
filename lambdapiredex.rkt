@@ -43,7 +43,7 @@
      ref
      (fetch e)
      (set! e e)
-     (alloc e)
+     #; (alloc e)
      (list-ref e e) ;; e[e]
      (list-assign e e e) ;; e[e := e]
      (if e e e) (e e)
@@ -63,6 +63,9 @@
   ;;;; x, y, z - refer to arbitrary variables
   (x y z ::= variable-not-otherwise-mentioned)
   ;; "binding forms"?
+
+  ;;;; nv - refers to a new variable reference (ref) and an updated store
+  (nv ::= (ref Σ))
   )
 
 (define-extended-language RS-λπ
@@ -79,23 +82,49 @@
 ;; We need to define triple, list, tuple, and set.
 (default-language λπ)
 
+;; alloc!: takes a value and a store and returns a reference to that value in the store
+;; alongside the new store.
 (define-metafunction λπ
-  alloc : v+undef Σ -> (ref Σ)
-  [(alloc v+undef ()) ((0 v+undef))]
-  [(alloc v+undef_1 ((ref v+undef_2) ...)) ((,(length (term ((ref v+undef_2) ...))) v+undef_1) (ref v+undef_2) ...)])
-  
+  alloc! : v+undef Σ -> nv
+  [(alloc! v+undef ()) (0 ((0 v+undef)))]
+  [(alloc! v+undef_1 ((ref v+undef_2) ...))
+   ((store-length ((ref v+undef_2) ...))
+    (((store-length((ref v+undef_2) ...)) v+undef_1) (ref v+undef_2) ...))]
+  )
+
+;; get: takes a ref and a store and returns the value referenced by ref in the store.
 (define-metafunction λπ
   get : ref Σ -> v+undef
   [(get ref ()) ((raise (triple "Uninitialized Global" str (dict))))]
   [(get ref ((ref v+undef_1) (ref_2 v+undef_2) ...)) v+undef_1]
   [(get ref ((ref_1 v+undef_1) (ref_2 v+undef_2) ...)) (get ref ((ref_2 v+undef_2) ...))])
-  
+
+;; update: takes a ref, a val, and a store and returns the store with the provided ref
+;; updated to val.
 (define-metafunction λπ
-  alloc! : ref val Σ -> Σ
-  [(alloc! ref val ()) ((raise (triple "Uninitialized Global" str (dict))))]
-  [(alloc! ref val ((ref val_1) (ref_1 val_2) ...)) ((ref val) (ref_1 val_2) ...)]
-  [(alloc! ref val ((ref_1 val_1) (ref_2 val_2) ...)) ((ref_1 val_1) (ref_3 val_3) ...)
-                                                      (where ((ref_3 val_3) ...) (alloc! ref val ((ref_2 val_2) ...)))])
+  update : ref val Σ -> Σ
+  [(update ref val ()) ((raise (triple "Uninitialized Global" str (dict))))]
+  [(update ref val ((ref val_1) (ref_1 val_2) ...)) ((ref val) (ref_1 val_2) ...)]
+  [(update ref val ((ref_1 val_1) (ref_2 val_2) ...)) ((ref_1 val_1) (ref_3 val_3) ...)
+                                                      (where ((ref_3 val_3) ...) (update ref val ((ref_2 val_2) ...)))])
+(define-metafunction λπ
+  let-helper : e (ref Σ) -> (e Σ)
+  [(let-helper e (ref Σ))
+   (e Σ)])
+
+(define-metafunction λπ
+  get-store : nv -> Σ
+  [(get-store (ref Σ)) Σ])
+
+(define-metafunction λπ
+  get-ref : nv -> ref
+  [(get-ref (ref Σ)) ref])
+
+(define-metafunction λπ
+  store-length : Σ -> ref
+  [(store-length Σ)
+   ,(length (term Σ))])
+  
 ;; side condition?
 
 (define -->PythonRR
@@ -103,7 +132,7 @@
    λπ
    ;; Figure 2
    [--> ((let x v+undef e) Σ)
-        (e (alloc v+undef Σ))
+        (e (get-ref (alloc! v+undef Σ)))
         E-LetLocal]
    [--> (ref ((ref_2 v+undef_1) ... (ref val) (ref_3 v+undef_3) ...))
         (val ((ref_2 v+undef_1) ... (ref val) (ref_3 v+undef_3) ...))
@@ -111,25 +140,38 @@
    [--> (ref ((ref_2 v+undef_1) ... (ref skull) (ref_3 v+undef_3) ...))
         ((raise (triple "Uninitialized Local" str (dict)) ((ref_2 v+undef_1) ... (ref skull) (ref_3 v+undef_3) ...)))
         E-GetVarUndef]
+   
    ;; Figure 3
    [--> ((obj-type val mval) Σ)
-        (,(length (term Σ)) (alloc (triple val mval (dict)) Σ))
+        (alloc! (triple val mval (dict)) Σ)
         E-Object]
    [--> ((tuple e_1 (list e_2 ...)) Σ)
-        (,(length (term Σ)) (alloc (triple e_1 (tuple e_2 ...) (dict)) Σ))
+        (alloc! (triple e_1 (tuple e_2 ...) (dict)) Σ)
         E-Tuple]
    [--> ((set e_1 (list e_2 ...)) Σ)
-        (,(length (term Σ)) (alloc (triple e_1 (set e_2 ...) (dict)) Σ))
+        (alloc! (triple e_1 (set e_2 ...) (dict)) Σ)
         E-Set]
+   
    ;; Figure 5
    [--> ((fetch ref) Σ)
         ((get ref Σ) Σ)
         E-Fetch]
    [--> ((set! ref val) Σ)
-        (val (alloc! ref val Σ))
-        E-Set!]))
+        (val (update ref val Σ))
+        E-Set!]
+   [--> ((alloc val) Σ)
+        (alloc! val Σ)
+        E-Alloc]
+   ;; (list-assign e e e) ;; e[e := e]
+   [--> ((list-assign ref_1 ref_2 val) Σ)
+        (val (get-store (alloc! ref_3 val Σ)))
+        ;;We need a side-condition that makes sure...
+        ;; ref_2 maps to a triple with mval=string_1
+        ;; ref_1 maps to a triple with a field of type string_1 and value ref_3
+        ]
+   ))
 
-(traces -->PythonRR (term ((set 2 (list 4 5)) ((0 2)))))
+(traces -->PythonRR (term ((alloc 3) ())))
 ;; List of things we need to define in the language or as a metafunction:
 ;; triple
 ;; sym
