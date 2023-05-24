@@ -19,8 +19,8 @@
   (ref ::= natural)
   
   ;;;; v, val - refer to values
-  (v val ::= (triple val mval (dict (string : ref) ...))
-     (triple x mval (dict (string : ref) ...))
+  (v val ::= (triple val mval (dict (string ref) ...))
+     (triple x mval (dict (string ref) ...))
      ref
      (sym string))
   
@@ -31,7 +31,7 @@
   (t ::= global local)
   
   ;;;; mval - refers to types
-  (mval ::= (no-meta) num str meta-none
+  (mval ::= (no-meta) number string meta-none
         (list val ...) (tuple val ...) (set val ...)
         (meta-class x)
         (meta-code (x ...) x e)
@@ -124,6 +124,17 @@
   store-length : Σ -> ref
   [(store-length Σ)
    ,(length (term Σ))])
+
+(define-metafunction λπ
+  add-field : nv string ref -> Σ
+  [(add-field (ref_1
+               ((ref_3 v+undef_1) ...
+                (ref_2 (triple x mval (dict (string_1 ref_4) ...)))
+                (ref_5 v+undef_2) ...
+                )) string_2 ref_2)
+   ((ref_3 v+undef_1) ...
+    (ref_2 (triple x mval (dict (string_2 ref_1) (string_1 ref_4) ...)))
+    (ref_5 v+undef_2) ...)])
   
 ;; side condition?
 
@@ -164,19 +175,82 @@
         E-Alloc]
    
    ;; Figure 6
-   ;; (list-assign e e e) ;; e[e := e]
-   [--> ((list-assign ref_4 ref_5 val) Σ)
-        (val (get-store (alloc! ref_1 val Σ)))
-        (side-condition (and (= (term (get ref_4 Σ))
-                                (term (triple x mval (dict (string_2 : ref_2) ... (string_1 : ref_1) (string_3 : ref_3) ...))))
-                             (= (term (get ref_5 Σ))
-                                (term (triple y string_1 (dict (string : ref) ...))))))
-        ;; We're currently getting an error because it doesn't recognize (string : ref) as a pattern variable.
-        ;; Do we need a better way to represent dictionaries? Racket level, or maybe as our own data structure with associated metafunctions?
-        ]
+   [--> ((list-assign ref_4 ref_5 val)
+         ((ref_6 v+undef_1) ...
+          (ref_4 (triple x mval (dict (string_2 ref_2) ... (string_1 ref_1) (string_3 ref_3) ...)))
+          (ref_7 v+undef_2) ...
+          (ref_5 (triple y string_1 (dict (string ref) ...)))
+          (ref_8 v+undef_3) ...
+          ))
+        (val (update ref_1 val
+                                ((ref_6 v+undef_1) ...
+                                 (ref_4 (triple x mval (dict (string_2 ref_2) ... (string_1 ref_1) (string_3 ref_3) ...)))
+                                 (ref_7 v+undef_2) ...
+                                 (ref_5 (triple y string_1 (dict (string ref) ...)))
+                                 (ref_8 v+undef_3) ...
+                                 )))
+        E-SetFieldUpdate-1]
+   [--> ((list-assign ref_4 ref_5 val)
+         ((ref_6 v+undef_1) ...
+          (ref_5 (triple y string_1 (dict (string ref) ...)))
+          (ref_7 v+undef_2) ...
+          (ref_4 (triple x mval (dict (string_2 ref_2) ... (string_1 ref_1) (string_3 ref_3) ...)))
+          (ref_8 v+undef_3) ...
+          ))
+        (val (update ref_1 val
+                                ((ref_6 v+undef_1) ...
+                                 (ref_4 (triple x mval (dict (string_2 ref_2) ... (string_1 ref_1) (string_3 ref_3) ...)))
+                                 (ref_7 v+undef_2) ...
+                                 (ref_5 (triple y string_1 (dict (string ref) ...)))
+                                 (ref_8 v+undef_3) ...
+                                 )))
+        E-SetFieldUpdate-2]
+   [--> ((list-assign ref_4 ref_5 val)
+         ((ref_6 v+undef_1) ...
+          (ref_4 (triple x mval (dict (string_2 ref_2) ...)))
+          (ref_7 v+undef_2) ...
+          (ref_5 (triple y string_1 (dict (string ref) ...)))
+          (ref_8 v+undef_3) ...
+          ))
+        (val (add-field (alloc! val
+                                ((ref_6 v+undef_1) ...
+                                 (ref_4 (triple x mval (dict (string_2 ref_2) ...)))
+                                 (ref_7 v+undef_2) ...
+                                 (ref_5 (triple y string_1 (dict (string ref) ...)))
+                                 (ref_8 v+undef_3) ...))
+                        string_1
+                        ref_4))
+        (side-condition (not (redex-match? λπ (term string_2)
+                                           (term string_1))))
+        E-SetFieldAdd-1]
+   [--> ((list-assign ref_4 ref_5 val)
+         ((ref_6 v+undef_1) ...
+          (ref_5 (triple y string_1 (dict (string ref) ...)))
+          (ref_7 v+undef_2) ...
+          (ref_4 (triple x mval (dict (string_2 ref_2) ...)))
+          (ref_8 v+undef_3) ...
+          ))
+         ;; Where condition that (string_2 ref_2) doesn't have string_1 as a member?
+        (val (add-field (alloc! val
+                                ((ref_6 v+undef_1) ...
+                                 (ref_5 (triple y string_1 (dict (string ref) ...)))
+                                 (ref_7 v+undef_2) ...
+                                 (ref_4 (triple x mval (dict (string_2 ref_2) ...)))
+                                 (ref_8 v+undef_3) ...))
+                        string_1
+                        ref_4))
+        E-SetFieldAdd-2]
    ))
 
-(traces -->PythonRR (term ((alloc 3) ())))
+#; (traces -->PythonRR (term ((list-assign 0 1 3)
+                          ((1 (triple x "str" (dict)))
+                           (0 (triple x "num" (dict)))))
+                          ))
+(traces -->PythonRR (term ((list-assign 1 2 3)
+                          ((1 (triple x "num" (dict ("str" 8))))
+                           (2 (triple x "str" (dict)))
+                           (8 0)))
+                          ))
 ;; List of things we need to define in the language or as a metafunction:
 ;; triple
 ;; sym

@@ -19,15 +19,12 @@
   (ref ::= natural)
   
   ;;;; v, val - refer to values
-  (v val ::= (triple val mval (string : ref ...))
-     (triple x mval (string : ref ...))
+  (v val ::= (triple val mval (dict (string ref) ...))
+     (triple x mval (dict (string ref) ...))
      ref
-     (sym string)
-     ;; What is (sym string) meant to represent? An error perhaps?
-     )
+     (sym string))
   
   (v+undef ::= v skull)
-  ;; undef? What's that? Is this syntax of "v+undef" cool?
   (e+undef ::= e skull)
   
   ;;;; t - refers to scope
@@ -39,27 +36,20 @@
         (meta-class x)
         (meta-code (x ...) x e)
         (λ (x ...) opt-var.e))
-
-  ;; What is this period doing in this mval definition?
-  
-  ;; General question: how much of this paper's syntax can we copy word for word,
-  ;; especially when the group of us don't understand exactly what it's doing?
-  ;; Also, what is opt-var?
   (opt-var ::= (x) (no-var))
-  ;; Why does x have parentheses around it here?
-
+  
   ;;;; e - refers to expressions
   (e ::= v
      ref
      (fetch e)
      (set! e e)
-     (alloc e)
+     #; (alloc e)
      (list-ref e e) ;; e[e]
      (list-assign e e e) ;; e[e := e]
      (if e e e) (e e)
      (let x e+undef e)
      x (assign e e) (delete e)
-     (e (e ...)) (e (e ...) e ...) (frame e) (return e)
+     (e (e ...)) (e (e ...) e) (frame e) (return e)
      (while e e e) (loop e e) break continue
      (builtin-prim op (e ...))
      (fun (x ...) opt-var e)
@@ -73,22 +63,155 @@
   ;;;; x, y, z - refer to arbitrary variables
   (x y z ::= variable-not-otherwise-mentioned)
   ;; "binding forms"?
+
+  ;;;; nv - refers to a new variable reference (ref) and an updated store
+  (nv ::= (ref Σ))
   )
 
-;; How much of these special form names (fetch, set!, allloc, if, let, frame,
-;; return, while, loop, etc) do we need to define? I assume all of them, but I want to
-;; double check :)
+(define-extended-language RS-λπ
+  λπ
+  (e ::= .... error)
+  (v ::= b (λ (x) e))
+  (c ::= (e ρ))
+  (ρ ::= ((x c) ...))
+  (vc ::= (v ρ))
+  (κ ::= mt (fn vc κ) (arg c κ) (prim (vc ... op) (c ...) κ) (handler b ((λ (x) e) ρ) κ))
+  (κκ ::= (fn vc κ) (arg c κ) (prim (vc ... op) (c ...) κ))
+  (s ::= (c κ)))
 
 ;; We need to define triple, list, tuple, and set.
-;; We're getting an error that reads as follows:
-;; lambdapiredex.rkt:36:3: define-language: the non-terminal e is defined in terms of itself
-;; at: e
-;; in: (define-language λπ (Σ ::= ((ref v+undef) ...)) (ref ::= natural) (v val ::= (triple val mval (string : ref ...)) (triple x mval (string : ref ...)) ref) (v+undef ::= v skull) (e+undef ::= e skull) (t ::= global local) (mval ::= (no-meta) number s...
-;; #(1195 1)
-;; ^^ How should we handle this? The ISWIM syntax self-references all the time.
-
 (default-language λπ)
 
+;; alloc!: takes a value and a store and returns a reference to that value in the store
+;; alongside the new store.
+(define-metafunction λπ
+  alloc! : v+undef Σ -> nv
+  [(alloc! v+undef ()) (0 ((0 v+undef)))]
+  [(alloc! v+undef_1 ((ref v+undef_2) ...))
+   ((store-length ((ref v+undef_2) ...))
+    (((store-length((ref v+undef_2) ...)) v+undef_1) (ref v+undef_2) ...))]
+  )
+
+;; get: takes a ref and a store and returns the value referenced by ref in the store.
+(define-metafunction λπ
+  get : ref Σ -> v+undef
+  [(get ref ()) ((raise (triple "Uninitialized Global" str (dict))))]
+  [(get ref ((ref v+undef_1) (ref_2 v+undef_2) ...)) v+undef_1]
+  [(get ref ((ref_1 v+undef_1) (ref_2 v+undef_2) ...)) (get ref ((ref_2 v+undef_2) ...))])
+
+;; update: takes a ref, a val, and a store and returns the store with the provided ref
+;; updated to val.
+(define-metafunction λπ
+  update : ref val Σ -> Σ
+  [(update ref val ()) ((raise (triple "Uninitialized Global" str (dict))))]
+  [(update ref val ((ref val_1) (ref_1 val_2) ...)) ((ref val) (ref_1 val_2) ...)]
+  [(update ref val ((ref_1 val_1) (ref_2 val_2) ...)) ((ref_1 val_1) (ref_3 val_3) ...)
+                                                      (where ((ref_3 val_3) ...) (update ref val ((ref_2 val_2) ...)))])
+(define-metafunction λπ
+  let-helper : e (ref Σ) -> (e Σ)
+  [(let-helper e (ref Σ))
+   (e Σ)])
+
+(define-metafunction λπ
+  get-store : nv -> Σ
+  [(get-store (ref Σ)) Σ])
+
+(define-metafunction λπ
+  get-ref : nv -> ref
+  [(get-ref (ref Σ)) ref])
+
+(define-metafunction λπ
+  store-length : Σ -> ref
+  [(store-length Σ)
+   ,(length (term Σ))])
+  
+;; side condition?
+
+(define -->PythonRR
+  (reduction-relation
+   λπ
+   ;; Figure 2
+   [--> ((let x v+undef e) Σ)
+        (e (get-ref (alloc! v+undef Σ)))
+        E-LetLocal]
+   [--> (ref ((ref_2 v+undef_1) ... (ref val) (ref_3 v+undef_3) ...))
+        (val ((ref_2 v+undef_1) ... (ref val) (ref_3 v+undef_3) ...))
+        E-GetVar]
+   [--> (ref ((ref_2 v+undef_1) ... (ref skull) (ref_3 v+undef_3) ...))
+        ((raise (triple "Uninitialized Local" str (dict)) ((ref_2 v+undef_1) ... (ref skull) (ref_3 v+undef_3) ...)))
+        E-GetVarUndef]
+   
+   ;; Figure 3
+   [--> ((obj-type val mval) Σ)
+        (alloc! (triple val mval (dict)) Σ)
+        E-Object]
+   [--> ((tuple e_1 (list e_2 ...)) Σ)
+        (alloc! (triple e_1 (tuple e_2 ...) (dict)) Σ)
+        E-Tuple]
+   [--> ((set e_1 (list e_2 ...)) Σ)
+        (alloc! (triple e_1 (set e_2 ...) (dict)) Σ)
+        E-Set]
+   
+   ;; Figure 5
+   [--> ((fetch ref) Σ)
+        ((get ref Σ) Σ)
+        E-Fetch]
+   [--> ((set! ref val) Σ)
+        (val (update ref val Σ))
+        E-Set!]
+   [--> ((alloc val) Σ)
+        (alloc! val Σ)
+        E-Alloc]
+   
+   ;; Figure 6
+   ;; (list-assign e e e) ;; e[e := e]
+   #; [--> ((list-assign ref_4 ref_5 val) Σ)
+        (val (get-store (alloc! ref_1 val Σ)))
+        (side-condition (and (= (term (get ref_4 Σ))
+                                (term (triple x mval (dict (string_2 ref_2) ... (string_1 ref_1) (string_3 ref_3) ...))))
+                             (= (term (get ref_5 Σ))
+                                (term (triple y string_1 (dict (string ref) ...))))))
+        E-SetFieldUpdate]
+   [--> ((list-assign ref_4 ref_5 val)
+         ((ref_6 v+undef_1) ...
+          (ref_4 (triple x mval (dict (string_2 ref_2) ... (string_1 ref_1) (string_3 ref_3) ...)))
+          (ref_7 v+undef_2) ...
+          (ref_5 (triple y string_1 (dict (string ref) ...)))
+          (ref_8 v+undef_3) ...
+          ))
+        (val (update ref_1 val
+                                ((ref_6 v+undef_1) ...
+                                 (ref_4 (triple x mval (dict (string_2 ref_2) ... (string_1 ref_1) (string_3 ref_3) ...)))
+                                 (ref_7 v+undef_2) ...
+                                 (ref_5 (triple y string_1 (dict (string ref) ...)))
+                                 (ref_8 v+undef_3) ...
+                                 )))
+        E-SetFieldUpdate-1]
+   [--> ((list-assign ref_4 ref_5 val)
+         ((ref_6 v+undef_1) ...
+          (ref_5 (triple y string_1 (dict (string ref) ...)))
+          (ref_7 v+undef_2) ...
+          (ref_4 (triple x mval (dict (string_2 ref_2) ... (string_1 ref_1) (string_3 ref_3) ...)))
+          (ref_8 v+undef_3) ...
+          ))
+        (val (update ref_1 val
+                                ((ref_6 v+undef_1) ...
+                                 (ref_4 (triple x mval (dict (string_2 ref_2) ... (string_1 ref_1) (string_3 ref_3) ...)))
+                                 (ref_7 v+undef_2) ...
+                                 (ref_5 (triple y string_1 (dict (string ref) ...)))
+                                 (ref_8 v+undef_3) ...
+                                 )))
+        E-SetFieldUpdate-1]
+   ))
+
+(traces -->PythonRR (term ((list-assign 1 2 3)
+                          ((4 6)
+                           (7 9)
+                           (9 1)
+                           (2 (triple x "str" (dict)))
+                           (1 (triple x "num" (dict ("num" 3) ("str" 8) ("meta-none" 6))))
+                           (8 0)))
+                          ))
 ;; List of things we need to define in the language or as a metafunction:
 ;; triple
 ;; sym
@@ -133,5 +256,3 @@
 ;; in-module
 
 ;; Reduction Rules
-;; they don't actually talk much about reduction rules for the basic function calls, etc.
-;; so how should we approach translating it?
