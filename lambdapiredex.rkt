@@ -66,6 +66,7 @@
 
   ;;;; nv - refers to a new variable reference (ref) and an updated store
   (nv ::= (ref Σ))
+  (vs ::= (v+undef Σ))
   )
 
 (define-extended-language RS-λπ
@@ -135,8 +136,22 @@
    ((ref_3 v+undef_1) ...
     (ref_2 (triple x mval (dict (string_2 ref_1) (string_1 ref_4) ...)))
     (ref_5 v+undef_2) ...)])
-  
-;; side condition?
+
+(define-metafunction λπ
+  get-pair : ref Σ -> vs
+  [(get-pair ref Σ) ((get ref Σ) Σ)])
+
+(define-metafunction λπ
+  class-lookup : r1 ref string Σ -> vs
+  [(class-lookup r1 ref string Σ) (class-lookup-mro (get-mval (get ref Σ)) string Σ)])
+
+(define-metafunction λπ
+  get-mval : v+undef -> mval
+  [(get-mval (triple x mval (dict (string ref) ...))) mval])
+
+(define-metafunction λπ
+  class-lookup-mro : mval string Σ -> v+undef
+  [(class-lookup-mro (list val_1 val_2 ...) string Σ) 
 
 (define -->PythonRR
   (reduction-relation
@@ -177,80 +192,82 @@
    ;; Figure 6
    [--> ((list-assign ref_4 ref_5 val)
          ((ref_6 v+undef_1) ...
-          (ref_4 (triple x mval (dict (string_2 ref_2) ... (string_1 ref_1) (string_3 ref_3) ...)))
-          (ref_7 v+undef_2) ...
-          (ref_5 (triple y string_1 (dict (string ref) ...)))
-          (ref_8 v+undef_3) ...
-          ))
-        (val (update ref_1 val
-                                ((ref_6 v+undef_1) ...
-                                 (ref_4 (triple x mval (dict (string_2 ref_2) ... (string_1 ref_1) (string_3 ref_3) ...)))
-                                 (ref_7 v+undef_2) ...
-                                 (ref_5 (triple y string_1 (dict (string ref) ...)))
-                                 (ref_8 v+undef_3) ...
-                                 )))
-        E-SetFieldUpdate-1]
-   [--> ((list-assign ref_4 ref_5 val)
-         ((ref_6 v+undef_1) ...
           (ref_5 (triple y string_1 (dict (string ref) ...)))
           (ref_7 v+undef_2) ...
           (ref_4 (triple x mval (dict (string_2 ref_2) ... (string_1 ref_1) (string_3 ref_3) ...)))
-          (ref_8 v+undef_3) ...
-          ))
+          (ref_8 v+undef_3) ...))
         (val (update ref_1 val
-                                ((ref_6 v+undef_1) ...
-                                 (ref_4 (triple x mval (dict (string_2 ref_2) ... (string_1 ref_1) (string_3 ref_3) ...)))
-                                 (ref_7 v+undef_2) ...
-                                 (ref_5 (triple y string_1 (dict (string ref) ...)))
-                                 (ref_8 v+undef_3) ...
-                                 )))
-        E-SetFieldUpdate-2]
-   [--> ((list-assign ref_4 ref_5 val)
-         ((ref_6 v+undef_1) ...
-          (ref_4 (triple x mval (dict (string_2 ref_2) ...)))
-          (ref_7 v+undef_2) ...
-          (ref_5 (triple y string_1 (dict (string ref) ...)))
-          (ref_8 v+undef_3) ...
-          ))
-        (val (add-field (alloc! val
-                                ((ref_6 v+undef_1) ...
-                                 (ref_4 (triple x mval (dict (string_2 ref_2) ...)))
-                                 (ref_7 v+undef_2) ...
-                                 (ref_5 (triple y string_1 (dict (string ref) ...)))
-                                 (ref_8 v+undef_3) ...))
-                        string_1
-                        ref_4))
-        (side-condition (not (redex-match? λπ (term string_2)
-                                           (term string_1))))
-        E-SetFieldAdd-1]
+                     ((ref_6 v+undef_1) ...
+                      (ref_4 (triple x mval (dict (string_2 ref_2) ... (string_1 ref_1) (string_3 ref_3) ...)))
+                      (ref_7 v+undef_2) ...
+                      (ref_5 (triple y string_1 (dict (string ref) ...)))
+                      (ref_8 v+undef_3) ... )))
+        E-SetFieldUpdate]
    [--> ((list-assign ref_4 ref_5 val)
          ((ref_6 v+undef_1) ...
           (ref_5 (triple y string_1 (dict (string ref) ...)))
           (ref_7 v+undef_2) ...
           (ref_4 (triple x mval (dict (string_2 ref_2) ...)))
-          (ref_8 v+undef_3) ...
-          ))
-         ;; Where condition that (string_2 ref_2) doesn't have string_1 as a member?
-        (val (add-field (alloc! val
-                                ((ref_6 v+undef_1) ...
-                                 (ref_5 (triple y string_1 (dict (string ref) ...)))
-                                 (ref_7 v+undef_2) ...
-                                 (ref_4 (triple x mval (dict (string_2 ref_2) ...)))
-                                 (ref_8 v+undef_3) ...))
-                        string_1
-                        ref_4))
-        E-SetFieldAdd-2]
-   ))
+          (ref_8 v+undef_3) ...))
+        ;; Where condition that (string_2 ref_2) doesn't have string_1 as a member?
+        (val (add-field
+              (alloc! val
+                      ((ref_6 v+undef_1) ...
+                       (ref_5 (triple y string_1 (dict (string ref) ...)))
+                       (ref_7 v+undef_2) ...
+                       (ref_4 (triple x mval (dict (string_2 ref_2) ...)))
+                       (ref_8 v+undef_3) ...))
+              string_1
+              ref_4))
+        (side-condition (not (member (term string_1) (term (string_2 ...)))))
+        E-SetFieldAdd]
+   [--> ((list-ref ref_1 ref_2)
+         ((ref_3 v+undef_3) ...
+          (ref_2 (triple x string_1 (dict (string ref) ...)))
+          (ref_6 v+undef_4) ...
+          (ref_1 (triple y mval (dict (string_2 ref_7) ... (string_1 ref_4) (string_3 ref_5) ...)))
+          (ref_8 v+undef_8) ...))
+        (get-pair ref_4
+                  ((ref_3 v+undef_3) ...
+                   (ref_2 (triple x string_1 (dict (string ref) ...)))
+                   (ref_6 v+undef_4) ...
+                   (ref_1 (triple y mval (dict (string_2 ref_7) ... (string_1 ref_4) (string_3 ref_5) ...)))
+                   (ref_8 v+undef_8) ...))
+        E-GetField]
+   ;; Figure 7
+   [--> ((list-ref r1 r2)
+         ((ref_1 v+undef_1) ...
+          (r2 (triple x string (dict (string_10 ref_10) ...)))
+          (ref_20 v+undef) ...
+          (r1 (triple ref mval (dict (string_1 ref_2) ...)))
+          (ref_30 v+undef) ...))
+        (class-lookup r1
+                      (get ref ((ref_1 v+undef_1) ...
+                                (r2 (triple x string (dict (string_10 ref_10) ...)))
+                                (ref_20 v+undef) ...
+                                (r1 (triple ref mval (dict (string_1 ref_2) ...)))
+                                (ref_30 v+undef) ...))
+                      string
+                      ((ref_1 v+undef_1) ...
+                       (r2 (triple x string (dict (string_10 ref_10) ...)))
+                       (ref_20 v+undef) ...
+                       (r1 (triple ref mval (dict (string_1 ref_2) ...)))
+                       (ref_30 v+undef) ...))
+        (side-condition (not (member (term string) (term (string_1 ...)))))]))
+        
 
-#; (traces -->PythonRR (term ((list-assign 0 1 3)
+#;(traces -->PythonRR (term ((list-assign 0 1 3)
                           ((1 (triple x "str" (dict)))
-                           (0 (triple x "num" (dict)))))
-                          ))
-(traces -->PythonRR (term ((list-assign 1 2 3)
-                          ((1 (triple x "num" (dict ("str" 8))))
-                           (2 (triple x "str" (dict)))
-                           (8 0)))
-                          ))
+                           (0 (triple x "num" (dict)))))))
+#;(traces -->PythonRR (term ((list-assign 1 2 3)
+                          ((2 (triple x "str" (dict)))
+                           (1 (triple x "num" (dict ("str" 8))))
+                           (8 0)))))
+#;(traces -->PythonRR (term ((list-ref 2 3)
+                           ((1 12)
+                            (3 (triple x "str" (dict)))
+                            (2 (triple x "num" (dict ("str" 8))))
+                            (8 0)))))
 ;; List of things we need to define in the language or as a metafunction:
 ;; triple
 ;; sym
