@@ -141,9 +141,16 @@
   get-pair : ref Σ -> vs
   [(get-pair ref Σ) ((get ref Σ) Σ)])
 
+;; (class-lookup 1 (triple 4 mval (dict)) string Σ)
 (define-metafunction λπ
-  class-lookup : r1 ref string Σ -> vs
-  [(class-lookup r1 ref string Σ) (class-lookup-mro (get-mval (get ref Σ)) string Σ)])
+  class-lookup : ref v+undef string Σ -> vs
+  [(class-lookup ref
+                 (triple x mval (dict (string_1 ref_1) ...
+                                         ("__mro__" ref_2)
+                                         (string_2 ref_3) ...))
+                 string
+                 Σ)
+   ((class-lookup-mro (get-mval (get (get ref_2 Σ))) string Σ) Σ)])
 
 (define-metafunction λπ
   get-mval : v+undef -> mval
@@ -151,7 +158,24 @@
 
 (define-metafunction λπ
   class-lookup-mro : mval string Σ -> v+undef
-  [(class-lookup-mro (list val_1 val_2 ...) string Σ) 
+  [(class-lookup-mro (list ref val_1 ...)
+                     string
+                     ((ref_2 v+undef_1) ...
+                      (ref (triple val_2 mval_1 (dict (string_1 ref_3) ...
+                                                      (string ref_1)
+                                                      (string_2 ref_4) ...)))
+                      (ref_5 v+undef_2) ...))
+   ref_1]
+  [(class-lookup-mro (list ref val_1 ...)
+                     string
+                     ((ref_2 v+undef_1) ...
+                      (ref (triple val_2 mval_1 (dict (string_1 ref_3) ...)))
+                      (ref_4 v+undef_2) ....))
+   (class-lookup-mro (list val_1 ...) string ((ref_2 v+undef_1) ...
+                                              (ref (triple val_2 mval_1 (dict (string_1 ref_3) ...)))
+                                              (ref_4 v+undef_2) ...))
+   (side-condition (not (member (term string) (term (string_1 ...)))))])
+                                   
 
 (define -->PythonRR
   (reduction-relation
@@ -235,25 +259,26 @@
                    (ref_8 v+undef_8) ...))
         E-GetField]
    ;; Figure 7
-   [--> ((list-ref r1 r2)
+   [--> ((list-ref ref_39 ref_40)
          ((ref_1 v+undef_1) ...
-          (r2 (triple x string (dict (string_10 ref_10) ...)))
+          (ref_40 (triple x string (dict (string_10 ref_10) ...)))
           (ref_20 v+undef) ...
-          (r1 (triple ref mval (dict (string_1 ref_2) ...)))
+          (ref_39 (triple ref mval (dict (string_1 ref_2) ...)))
           (ref_30 v+undef) ...))
-        (class-lookup r1
+        (class-lookup ref_39
                       (get ref ((ref_1 v+undef_1) ...
-                                (r2 (triple x string (dict (string_10 ref_10) ...)))
+                                (ref_40 (triple x string (dict (string_10 ref_10) ...)))
                                 (ref_20 v+undef) ...
-                                (r1 (triple ref mval (dict (string_1 ref_2) ...)))
+                                (ref_39 (triple ref mval (dict (string_1 ref_2) ...)))
                                 (ref_30 v+undef) ...))
                       string
                       ((ref_1 v+undef_1) ...
-                       (r2 (triple x string (dict (string_10 ref_10) ...)))
+                       (ref_40 (triple x string (dict (string_10 ref_10) ...)))
                        (ref_20 v+undef) ...
-                       (r1 (triple ref mval (dict (string_1 ref_2) ...)))
+                       (ref_39 (triple ref mval (dict (string_1 ref_2) ...)))
                        (ref_30 v+undef) ...))
-        (side-condition (not (member (term string) (term (string_1 ...)))))]))
+        (side-condition (not (member (term string) (term (string_1 ...)))))
+        E-GetFieldClass]))
         
 
 #;(traces -->PythonRR (term ((list-assign 0 1 3)
@@ -264,10 +289,19 @@
                            (1 (triple x "num" (dict ("str" 8))))
                            (8 0)))))
 #;(traces -->PythonRR (term ((list-ref 2 3)
-                           ((1 12)
-                            (3 (triple x "str" (dict)))
-                            (2 (triple x "num" (dict ("str" 8))))
-                            (8 0)))))
+                             ((1 12)
+                              (3 (triple x "str" (dict)))
+                              (2 (triple x "num" (dict ("str" 8))))
+                              (8 0)))))
+(traces -->PythonRR (term ((list-ref 1 2)
+                            ((2 (triple 0 "str" (dict)))
+                             (1 (triple 3 mval (dict)))
+                             (3 (triple 4 mval (dict ("__mro__" 4))))
+                             (4 5)
+                             (5 (triple 0 (list 6 val_2) (dict)))
+                             (6 (triple 0 mval (dict ("str" 7))))))))
+;; (class-lookup 1 (triple 4 mval (dict)) string Σ)
+
 ;; List of things we need to define in the language or as a metafunction:
 ;; triple
 ;; sym
