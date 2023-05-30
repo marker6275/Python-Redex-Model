@@ -57,6 +57,7 @@
   ;;;; nv - refers to a new variable reference (ref) and an updated store
   (nv ::= (ref Σ))
   (vs ::= (v+undef Σ))
+  (es ::= (e Σ))
   )
 
 (define-extended-language RS-λπ
@@ -82,6 +83,11 @@
    ((store-length ((ref v+undef_2) ...))
     (((store-length((ref v+undef_2) ...)) v+undef_1) (ref v+undef_2) ...))]
   )
+
+(define-metafunction λπ
+  local-substitute : e x nv -> es
+  [(local-substitute e x nv)
+   ((substitute e (x (get-ref nv))) (get-store nv))])
 
 ;; get: takes a ref and a store and returns the value referenced by ref in the store.
 (define-metafunction λπ
@@ -160,9 +166,11 @@
                      ((ref_2 v+undef_1) ...
                       (ref (triple val_2 mval_1 (dict (string_1 ref_3) ...)))
                       (ref_4 v+undef_2) ....))
-   (class-lookup-mro (list val_1 ...) string ((ref_2 v+undef_1) ...
-                                              (ref (triple val_2 mval_1 (dict (string_1 ref_3) ...)))
-                                              (ref_4 v+undef_2) ...))
+   (class-lookup-mro (list val_1 ...)
+                     string
+                     ((ref_2 v+undef_1) ...
+                      (ref (triple val_2 mval_1 (dict (string_1 ref_3) ...)))
+                      (ref_4 v+undef_2) ...))
    (side-condition (not (member (term string) (term (string_1 ...)))))])
                                    
 
@@ -171,7 +179,7 @@
    λπ
    ;; Figure 2
    [--> ((let x v+undef e) Σ)
-        (e (get-ref (alloc! v+undef Σ)))
+        (local-substitute e x (alloc! v+undef Σ))
         E-LetLocal]
    [--> (ref ((ref_2 v+undef_1) ... (ref val) (ref_3 v+undef_3) ...))
         (val ((ref_2 v+undef_1) ... (ref val) (ref_3 v+undef_3) ...))
@@ -269,7 +277,8 @@
         (side-condition (not (member (term string) (term (string_2 ...)))))
         E-GetFieldClass]))
         
-
+#;(traces -->PythonRR (term ((let x 3 x)
+                           ())))
 #;(traces -->PythonRR (term ((list-assign 0 1 3)
                           ((1 (triple x "str" (dict)))
                            (0 (triple x "num" (dict)))))))
@@ -283,12 +292,13 @@
                               (2 (triple x "num" (dict ("str" 8))))
                               (8 0)))))
 (traces -->PythonRR (term ((list-ref 1 2)
-                           ((2 (triple 0 "str" (dict ("hi" 1))))
-                            (1 (triple 3 "na" (dict ("yo" 77))))
+                           ((2 (triple 0 "str" (dict)))
+                            (1 (triple 3 "na" (dict)))
                             (3 (triple 4 "na" (dict ("__mro__" 4))))
                             (4 5)
-                            (5 (triple 0 (list 6 0) (dict)))
-                            (6 (triple 0 "na" (dict ("str" 7))))))))
+                            (5 (triple 0 (list 0 6) (dict)))
+                            (6 (triple 0 "na" (dict ("str" 7))))
+                            (0 (triple 0 "na" (dict)))))))
 ;; (class-lookup 1 (triple 4 mval (dict)) string Σ)
 
 ;; List of things we need to define in the language or as a metafunction:
