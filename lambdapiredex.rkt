@@ -258,26 +258,34 @@
                    (ref_1 (triple y mval (dict (string_2 ref_7) ... (string_1 ref_4) (string_3 ref_5) ...)))
                    (ref_8 v+undef_8) ...))
         E-GetField]
+   #;(traces -->PythonRR (term ((list-ref 1 2)
+                                ((2 (triple 0 "str" (dict)))
+                                 (1 (triple 3 0 (dict)))
+                                 (3 (triple 4 0 (dict ("__mro__" 4))))
+                                 (4 5)
+                                 (5 (triple 0 (list 6 val_2) (dict)))
+                                 (6 (triple 0 0 (dict ("str" 7))))))))
    ;; Figure 7
-   [--> ((list-ref ref_39 ref_40)
+   [--> ((list-ref ref_4 ref_2)
          ((ref_1 v+undef_1) ...
-          (ref_40 (triple x string (dict (string_10 ref_10) ...)))
-          (ref_20 v+undef) ...
-          (ref_39 (triple ref mval (dict (string_1 ref_2) ...)))
-          (ref_30 v+undef) ...))
-        (class-lookup ref_39
+          (ref_2 (triple x string (dict (string_1 ref_6) ...)))
+          (ref_3 v+undef_2) ...
+          (ref_4 (triple ref mval (dict (string_2 ref_7) ...)))
+          (ref_5 v+undef_3) ...))
+        (5 Σ)
+        #; (class-lookup ref_4
                       (get ref ((ref_1 v+undef_1) ...
-                                (ref_40 (triple x string (dict (string_10 ref_10) ...)))
-                                (ref_20 v+undef) ...
-                                (ref_39 (triple ref mval (dict (string_1 ref_2) ...)))
-                                (ref_30 v+undef) ...))
+                                (ref_2 (triple x string (dict (string_1 ref_6) ...)))
+                                (ref_3 v+undef_2) ...
+                                (ref_4 (triple ref mval (dict (string_2 ref_7) ...)))
+                                (ref_5 v+undef_3) ...))
                       string
                       ((ref_1 v+undef_1) ...
-                       (ref_40 (triple x string (dict (string_10 ref_10) ...)))
-                       (ref_20 v+undef) ...
-                       (ref_39 (triple ref mval (dict (string_1 ref_2) ...)))
-                       (ref_30 v+undef) ...))
-        (side-condition (not (member (term string) (term (string_1 ...)))))
+                       (ref_2 (triple x string (dict (string_1 ref_6) ...)))
+                       (ref_3 v+undef_2) ...
+                       (ref_4 (triple ref mval (dict (string_2 ref_7) ...)))
+                       (ref_5 v+undef_3) ...))
+        (side-condition (not (member (term string) (term (string_2 ...)))))
         E-GetFieldClass]))
         
 
@@ -294,12 +302,12 @@
                               (2 (triple x "num" (dict ("str" 8))))
                               (8 0)))))
 (traces -->PythonRR (term ((list-ref 1 2)
-                            ((2 (triple 0 "str" (dict)))
-                             (1 (triple 3 mval (dict)))
-                             (3 (triple 4 mval (dict ("__mro__" 4))))
+                            ((2 (triple 0 "str" (dict ("hi" 1))))
+                             (1 (triple 3 0 (dict ("yo" 77))))
+                             (3 (triple 4 0 (dict ("__mro__" 4))))
                              (4 5)
                              (5 (triple 0 (list 6 val_2) (dict)))
-                             (6 (triple 0 mval (dict ("str" 7))))))))
+                             (6 (triple 0 0 (dict ("str" 7))))))))
 ;; (class-lookup 1 (triple 4 mval (dict)) string Σ)
 
 ;; List of things we need to define in the language or as a metafunction:
