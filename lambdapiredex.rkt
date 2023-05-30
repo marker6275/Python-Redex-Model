@@ -81,7 +81,7 @@
   [(alloc! v+undef ()) (0 ((0 v+undef)))]
   [(alloc! v+undef_1 ((ref v+undef_2) ...))
    ((store-length ((ref v+undef_2) ...))
-    (((store-length((ref v+undef_2) ...)) v+undef_1) (ref v+undef_2) ...))]
+    (((store-length ((ref v+undef_2) ...)) v+undef_1) (ref v+undef_2) ...))]
   )
 
 (define-metafunction λπ
@@ -108,7 +108,7 @@
   let-helper : e (ref Σ) -> (e Σ)
   [(let-helper e (ref Σ))
    (e Σ)])
-
+  
 (define-metafunction λπ
   get-store : nv -> Σ
   [(get-store (ref Σ)) Σ])
@@ -291,7 +291,7 @@
                               (3 (triple x "str" (dict)))
                               (2 (triple x "num" (dict ("str" 8))))
                               (8 0)))))
-(traces -->PythonRR (term ((list-ref 1 2)
+#;(traces -->PythonRR (term ((list-ref 1 2)
                            ((2 (triple 0 "str" (dict)))
                             (1 (triple 3 "na" (dict)))
                             (3 (triple 4 "na" (dict ("__mro__" 4))))
@@ -301,6 +301,30 @@
                             (0 (triple 0 "na" (dict)))))))
 ;; (class-lookup 1 (triple 4 mval (dict)) string Σ)
 
+#;(traces -->PythonRR
+        (term
+         ((fetch 3)
+          ,(second
+            (first
+             (apply-reduction-relation -->PythonRR
+                                       (term
+                                        ((set! 2 (triple 4 "str" (dict)))
+                                         ((3 14) (2 45) (1 13) (0 12))))))))))
+#;(traces -->PythonRR
+        (term ((alloc 44)
+              ,(second
+                (first
+                 (apply-reduction-relation -->PythonRR
+                                           (term
+                                            ((fetch 3)
+                                             ,(second
+                                               (first
+                                                (apply-reduction-relation -->PythonRR
+                                                                          (term
+                                                                           ((set! 2 (triple 4 "str" (dict)))
+                                                                            ((3 14) (2 45) (1 13) (0 12)))))))))))))))
+
+(traces -->PythonRR (term ((set! 1 12) ((0 4) (1 55) (2 34)))))
 ;; List of things we need to define in the language or as a metafunction:
 ;; triple
 ;; sym
