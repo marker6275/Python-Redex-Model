@@ -52,7 +52,6 @@
 
   ;;;; x, y, z - refer to arbitrary variables
   (x y z ::= variable-not-otherwise-mentioned)
-  ;; "binding forms"?
 
   ;;;; nv - refers to a new variable reference (ref) and an updated store
   (nv ::= (ref Σ))
