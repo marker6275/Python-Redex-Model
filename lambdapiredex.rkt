@@ -60,18 +60,6 @@
   (es ::= (e Σ))
   )
 
-(define-extended-language RS-λπ
-  λπ
-  (e ::= .... error)
-  (v ::= b (λ (x) e))
-  (c ::= (e ρ))
-  (ρ ::= ((x c) ...))
-  (vc ::= (v ρ))
-  (κ ::= mt (fn vc κ) (arg c κ) (prim (vc ... op) (c ...) κ) (handler b ((λ (x) e) ρ) κ))
-  (κκ ::= (fn vc κ) (arg c κ) (prim (vc ... op) (c ...) κ))
-  (s ::= (c κ)))
-
-;; We need to define triple, list, tuple, and set.
 (default-language λπ)
 
 ;; alloc!: takes a value and a store and returns a reference to that value in the store
@@ -230,7 +218,6 @@
           (ref_7 v+undef_2) ...
           (ref_4 (triple x mval (dict (string_2 ref_2) ...)))
           (ref_8 v+undef_3) ...))
-        ;; Where condition that (string_2 ref_2) doesn't have string_1 as a member?
         (val (add-field
               (alloc! val
                       ((ref_6 v+undef_1) ...
@@ -276,72 +263,29 @@
                        (ref_5 v+undef_3) ...))
         (side-condition (not (member (term string) (term (string_2 ...)))))
         E-GetFieldClass]))
-        
-#;(traces -->PythonRR (term ((let x 3 x)
-                           ())))
+
+#;(traces -->PythonRR (term ((fetch 3) ((3 (triple 3 "num" (dict)))))))
+#;(traces -->PythonRR (term ((let x 3 (fetch x))
+                           ((3 (triple 3 4 (dict)))))))
 #;(traces -->PythonRR (term ((list-assign 0 1 3)
                           ((1 (triple x "str" (dict)))
                            (0 (triple x "num" (dict)))))))
 #;(traces -->PythonRR (term ((list-assign 1 2 3)
                           ((2 (triple x "str" (dict)))
                            (1 (triple x "num" (dict ("str" 8))))
-                           (8 0)))))
+                           (8 0)))
+                          ))
 #;(traces -->PythonRR (term ((list-ref 2 3)
                              ((1 12)
                               (3 (triple x "str" (dict)))
                               (2 (triple x "num" (dict ("str" 8))))
                               (8 0)))))
-(traces -->PythonRR (term ((list-ref 1 2)
-                           ((2 (triple 0 "str" (dict)))
-                            (1 (triple 3 "na" (dict)))
-                            (3 (triple 4 "na" (dict ("__mro__" 4))))
-                            (4 5)
-                            (5 (triple 0 (list 0 6) (dict)))
-                            (6 (triple 0 "na" (dict ("str" 7))))
-                            (0 (triple 0 "na" (dict)))))))
-;; (class-lookup 1 (triple 4 mval (dict)) string Σ)
-
-;; List of things we need to define in the language or as a metafunction:
-;; triple
-;; sym
-;; skull
-;; global
-;; local
-;; no-meta
-;; meta-none
-;; list -- meta edition
-;; tuple -- meta edition
-;; set -- meta edition
-;; meta-class
-;; meta-code
-;; no-var
-;; fetch
-;; set!
-;; alloc
-;; if
-;; let
-;; in
-;; delete
-;; *
-;; frame
-;; return
-;; while
-;; loop
-;; break
-;; continue
-;; builtin-prim
-;; op -- probably just copy from lecture?
-;; fun
-;; cons/pair
-;; list
-;; tuple
-;; set
-;; tryexcept
-;; tryfinally
-;; raise
-;; err
-;; module
-;; construct-module
-;; in-module
-
-;; Reduction Rules
+#;(traces -->PythonRR (term ((list-ref 5 6)
+                           ((6 (triple 0 "y" (dict)))
+                            (5 (triple 4 "complexClassObject" (dict)))
+                            (4 (triple 3 "complexClass" (dict ("__mro__" 3))))
+                            (3 2) ;; method resolution order (mro) is the order in which to search for a field from parent classes.
+                            ;; here, the mro is the list of classes below: (list 1)
+                            (2 (triple 0 (list 1) (dict)))
+                            (1 (triple 0 "simpleClass" (dict ("y" 0))))
+                            (0 (triple 2 "num" (dict)))))))
