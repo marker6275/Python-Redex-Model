@@ -33,7 +33,7 @@
      ref
      (fetch e)
      (set! e e)
-     #; (alloc e)
+     (alloc e)
      (list-ref e e) ;; e[e]
      (list-assign e e e) ;; e[e := e]
      (if e e e) (e e)
@@ -57,19 +57,7 @@
   ;;;; nv - refers to a new variable reference (ref) and an updated store
   (nv ::= (ref Σ))
   (vs ::= (v+undef Σ))
-  (es ::= (e Σ))
-  )
-
-(define-extended-language RS-λπ
-  λπ
-  (e ::= .... error)
-  (v ::= b (λ (x) e))
-  (c ::= (e ρ))
-  (ρ ::= ((x c) ...))
-  (vc ::= (v ρ))
-  (κ ::= mt (fn vc κ) (arg c κ) (prim (vc ... op) (c ...) κ) (handler b ((λ (x) e) ρ) κ))
-  (κκ ::= (fn vc κ) (arg c κ) (prim (vc ... op) (c ...) κ))
-  (s ::= (c κ)))
+  (es ::= (e Σ)))
 
 ;; We need to define triple, list, tuple, and set.
 (default-language λπ)
@@ -276,7 +264,19 @@
                        (ref_5 v+undef_3) ...))
         (side-condition (not (member (term string) (term (string_2 ...)))))
         E-GetFieldClass]))
-        
+
+(begin
+  (traces -->PythonRR (term ((let x 0 (fetch x)) ((0 122))))))
+;; traces for figure 3
+#;(traces -->PythonRR [(term ((set 12 (list 12 13 14 15)) ()))]
+        [(traces -->PythonRR (term ((tuple 12 (list 12 13 14 15)) ())))]
+        [(traces -->PythonRR (term ((obj-type 4 "str") ())))])
+
+#;(begin
+  (traces -->PythonRR (term ((set 12 (list 12 13 14 15)) ())))
+  (traces -->PythonRR (term ((tuple 12 (list 12 13 14 15)) ())))
+  (traces -->PythonRR (term ((obj-type 4 "str") ()))))
+
 #;(traces -->PythonRR (term ((let x 3 x)
                            ())))
 #;(traces -->PythonRR (term ((list-assign 0 1 3)
@@ -324,7 +324,10 @@
                                                                            ((set! 2 (triple 4 "str" (dict)))
                                                                             ((3 14) (2 45) (1 13) (0 12)))))))))))))))
 
-(traces -->PythonRR (term ((set! 1 12) ((0 4) (1 55) (2 34)))))
+;(traces -->PythonRR (term ((alloc 12) ((0 4) (1 55) (2 34)))))
+;(traces -->PythonRR (term ((let x 3 x) ())))
+;(traces -->PythonRR (term (2 ((3 1) (2 skull) (1 15) (0 60)))))
+
 ;; List of things we need to define in the language or as a metafunction:
 ;; triple
 ;; sym
