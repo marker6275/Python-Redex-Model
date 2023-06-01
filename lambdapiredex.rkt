@@ -68,8 +68,7 @@
   [(alloc! v+undef ()) (0 ((0 v+undef)))]
   [(alloc! v+undef_1 ((ref v+undef_2) ...))
    ((store-length ((ref v+undef_2) ...))
-    (((store-length((ref v+undef_2) ...)) v+undef_1) (ref v+undef_2) ...))]
-  )
+    (((store-length((ref v+undef_2) ...)) v+undef_1) (ref v+undef_2) ...))])
 
 (define-metafunction λπ
   local-substitute : e x nv -> es
@@ -265,9 +264,9 @@
 
 #;(begin
   (traces -->PythonRR (term ((let x 0 (fetch x)) ((0 122)))))
-  (traces -->PythonRR (term ((let x 0 (alloc x)) ((0 122))))))
+  (traces -->PythonRR (term ((let x 3 (alloc x)) ((0 122))))))
 
-#;(begin
+(begin
   (traces -->PythonRR (term ((set 12 (list 12 13 14 15)) ())))
   (traces -->PythonRR (term ((tuple 12 (list 12 13 14 15)) ())))
   (traces -->PythonRR (term ((obj-type 4 "str") ()))))
