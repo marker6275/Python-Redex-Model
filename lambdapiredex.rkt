@@ -263,6 +263,27 @@
         (side-condition (not (member (term string) (term (string_2 ...)))))
         E-GetFieldClass]))
 
+#;(begin
+  (traces -->PythonRR (term ((let x 0 (fetch x)) ((0 122)))))
+  (traces -->PythonRR (term ((let x 0 (alloc x)) ((0 122))))))
+
+#;(begin
+  (traces -->PythonRR (term ((set 12 (list 12 13 14 15)) ())))
+  (traces -->PythonRR (term ((tuple 12 (list 12 13 14 15)) ())))
+  (traces -->PythonRR (term ((obj-type 4 "str") ()))))
+
+#;(traces -->PythonRR (term ((list-ref 5 6)
+                           ((6 (triple 0 "y" (dict)))
+                            (5 (triple 4 "complexClassObject" (dict)))
+                            (4 (triple 3 "complexClass" (dict ("__mro__" 3))))
+                            (3 2) ;; method resolution order (mro) is the order in which to search for a field from parent classes.
+                            ;; here, the mro is the list of classes below: (list 1)
+                            (2 (triple 0 (list 1) (dict)))
+                            (1 (triple 0 "simpleClass" (dict ("y" 0))))
+                            (0 (triple 2 "num" (dict)))))))
+
+
+;; -------------------------------------------------------------------
 #;(traces -->PythonRR (term ((fetch 3) ((3 (triple 3 "num" (dict)))))))
 #;(traces -->PythonRR (term ((let x 3 (fetch x))
                            ((3 (triple 3 4 (dict)))))))
@@ -279,12 +300,3 @@
                               (3 (triple x "str" (dict)))
                               (2 (triple x "num" (dict ("str" 8))))
                               (8 0)))))
-#;(traces -->PythonRR (term ((list-ref 5 6)
-                           ((6 (triple 0 "y" (dict)))
-                            (5 (triple 4 "complexClassObject" (dict)))
-                            (4 (triple 3 "complexClass" (dict ("__mro__" 3))))
-                            (3 2) ;; method resolution order (mro) is the order in which to search for a field from parent classes.
-                            ;; here, the mro is the list of classes below: (list 1)
-                            (2 (triple 0 (list 1) (dict)))
-                            (1 (triple 0 "simpleClass" (dict ("y" 0))))
-                            (0 (triple 2 "num" (dict)))))))
